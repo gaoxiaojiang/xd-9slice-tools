@@ -130,6 +130,8 @@ function SetGlobalPosition(node, newPosition) {
   node.moveInParentCoordinates(deltaX, deltaY)
 }
 
+function getNaturalSize(node) {}
+
 /**
  * スライスノード内のリサイズ
  * @param {*} mask
@@ -168,7 +170,7 @@ function scaleAdjustTop(
   var newGraphicBounds = null
 
   switch (mode) {
-    case 'topleft':
+    case 'top-left':
       if (sliceTopPx == 0) break
       if (sliceLeftPx == 0) break
       newMaskBounds = {
@@ -184,7 +186,7 @@ function scaleAdjustTop(
         height: imageFill.naturalHeight,
       }
       break
-    case 'topright':
+    case 'top-right':
       if (sliceTopPx == 0) break
       if (sliceRightPx == 0) break
       newMaskBounds = {
@@ -246,7 +248,7 @@ function scaleAdjustTop(
       }
       break
     }
-    case 'bottomleft':
+    case 'bottom-left':
       if (sliceBottomPx == 0) break
       if (sliceLeftPx == 0) break
       newMaskBounds = {
@@ -265,7 +267,7 @@ function scaleAdjustTop(
         height: imageFill.naturalHeight,
       }
       break
-    case 'bottomright':
+    case 'bottom-right':
       if (sliceBottomPx == 0) break
       if (sliceRightPx == 0) break
       newMaskBounds = {
@@ -358,14 +360,17 @@ function scaleAdjustTop(
   }
 
   if (newMaskBounds != null) {
-    console.log(newMaskBounds)
     SetGlobalBounds(mask, newMaskBounds)
-    console.log(mask.globalBounds)
   }
 
   if (newGraphicBounds != null) {
     SetGlobalBounds(graphicNode, newGraphicBounds)
   }
+
+  if (newMaskBounds == null || newGraphicBounds == null) {
+    return false
+  }
+  return true
 }
 
 /**
@@ -392,58 +397,30 @@ function scaleAdjustSliceRegroup(wholeGlobalBounds, sliceNode, sliceParameter) {
   commands.ungroup()
 
   var maskGroupItems = [mask]
+  var visible = true
   var image = children.forEach(child => {
     // スライスノード内 リサイズの必要なものを探す
     if (child == mask) return
-    scaleAdjustTop(
+    var result = scaleAdjustTop(
       sliceNodeName,
       wholeGlobalBounds,
       mask,
       child,
       sliceParameter,
     )
+    if (!result) {
+      visible = false
+    }
     maskGroupItems.push(child)
   })
 
   // 元通りのグループ化
   selection.items = maskGroupItems
-  maskGroupItems.forEach(item => {
-    console.log(item.name)
-  })
   commands.createMaskGroup()
 
   var maskGroup = selection.items[0]
   maskGroup.name = sliceNodeName
-}
-
-function scaleAdjustSlice(wholeGlobalBounds, sliceNode, sliceParameter) {
-  var mask = sliceNode.mask
-  if (!mask) {
-    console.log('*** not found mask')
-    return
-  }
-
-  var children = []
-  sliceNode.children.forEach(child => {
-    children.push(child)
-  })
-
-  const sliceNodeName = sliceNode.name
-  var parent = sliceNode.parent
-
-  var maskGroupItems = [mask]
-  var image = children.forEach(child => {
-    // スライスノード内 リサイズの必要なものを探す
-    if (child == mask) return
-    scaleAdjustTop(
-      sliceNodeName,
-      wholeGlobalBounds,
-      mask,
-      child,
-      sliceParameter,
-    )
-    maskGroupItems.push(child)
-  })
+  maskGroup.visible = visible
 }
 
 /**
@@ -504,16 +481,16 @@ async function pluginMake9Slice(slection, root) {
       selection.items = [item, shape1]
       commands.createMaskGroup()
       var slices = [selection.items[0]]
-      selection.items[0].name = 'topleft'
+      selection.items[0].name = 'top-left'
       const names = [
         'top',
-        'topright',
+        'top-right',
         'left',
         'center',
         'right',
-        'bottomleft',
+        'bottom-left',
         'bottom',
-        'bottomright',
+        'bottom-right',
       ]
       names.forEach(name => {
         commands.duplicate()
