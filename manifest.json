@@ -13,6 +13,14 @@
       "label": "scale adjust",
       "commandId": "pluginScaleAdjust",
       "shortcut": {
+        "win": "Ctrl+Shift+Alt+0"
+      }
+    },
+    {
+      "type": "menu",
+      "label": "make 9slice",
+      "commandId": "pluginMake9Slice",
+      "shortcut": {
         "win": "Ctrl+Shift+Alt+9"
       }
     }
