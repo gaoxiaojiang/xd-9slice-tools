@@ -1,0 +1,20 @@
+{
+  "id": "9slice-tool",
+  "name": "9slice-tool",
+  "description": "9slice tool",
+  "version": "0.0.1",
+  "host": {
+    "app": "XD",
+    "minVersion": "14.0.0"
+  },
+  "uiEntryPoints": [
+    {
+      "type": "menu",
+      "label": "scale adjust",
+      "commandId": "pluginScaleAdjust",
+      "shortcut": {
+        "win": "Ctrl+Shift+Alt+9"
+      }
+    }
+  ]
+}
