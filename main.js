@@ -6,6 +6,7 @@ const {
   ImageFill,
   Line,
   Rectangle,
+  GraphicNode,
   selection,
 } = require('scenegraph')
 const application = require('application')
@@ -506,10 +507,36 @@ async function pluginMake9Slice(slection, root) {
   console.log('done')
 }
 
+function pluginChangeScaleBehavior(slection, root) {
+  selection.items.forEach(item => {
+    var clone = null
+    var fill = item.fill
+    if (fill != null) {
+      console.log(fill)
+      console.log('change')
+      fill.scaleBehavior = ImageFill.SCALE_STRETCH
+      console.log(fill.scaleBehavior)
+      if (fill.scaleBehavior != ImageFill.SCALE_STRETCH) {
+        console.log('fail')
+        console.log(fill.scaleBehavior)
+      } else {
+        clone = fill.clone
+        var rect = new GraphicNode()
+        rect.width = 100
+        rect.height = 100
+        rect.fill = clone
+        selection.insertionParent.addChild(rect)
+        selection.items = [rect]
+      }
+    }
+  })
+}
+
 module.exports = {
   // コマンドIDとファンクションの紐付け
   commands: {
     pluginScaleAdjust: pluginScaleAdjust,
     pluginMake9Slice: pluginMake9Slice,
+    pluginChangeScaleBehavior: pluginChangeScaleBehavior,
   },
 }

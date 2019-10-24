@@ -23,6 +23,11 @@
       "shortcut": {
         "win": "Ctrl+Shift+Alt+9"
       }
+    },
+    {
+      "type": "menu",
+      "label": "change scale behavior",
+      "commandId": "pluginChangeScaleBehavior"
     }
   ]
 }
