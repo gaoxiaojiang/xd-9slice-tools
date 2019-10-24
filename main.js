@@ -476,13 +476,22 @@ async function pluginMake9Slice(slection, root) {
     var itemName = item.name
     const parameter = get9sliceParamters(itemName)
     if (item.fill != null) {
-      var shape1 = new Rectangle()
-      selection.insertionParent.addChild(shape1)
-      SetGlobalBounds(shape1, item.globalBounds)
-      selection.items = [item, shape1]
+      // マスクの作成
+      var mask = new Rectangle()
+      mask.name = 'top-left-mask'
+      selection.insertionParent.addChild(mask)
+      SetGlobalBounds(mask, item.globalBounds)
+      // 画像をコピーして、CCライブラリのものでも変形できるようにする
+      var rectImage = duplicateRectangleStretch(item)
+      rectImage.name = 'top-left-image'
+      selection.insertionParent.addChild(rectImage)
+      // マスクグループの作成
+      selection.items = [rectImage, mask]
       commands.createMaskGroup()
       var slices = [selection.items[0]]
       selection.items[0].name = 'top-left'
+
+      // 他のスライスも作成する
       const names = [
         'top',
         'top-right',
@@ -498,37 +507,42 @@ async function pluginMake9Slice(slection, root) {
         selection.items[0].name = name
         slices.push(selection.items[0])
       })
+      // 一個のグループにまとめる
       selection.items = slices
       commands.group()
       selection.items[0].name = itemName
+      //
+      item.removeFromParent()
+      selection.items[0].addChild(item)
+      item.name = "source"
+      item.visible = false
+      //
+      selection.items = slices
     }
   })
 
   console.log('done')
 }
 
+function duplicateRectangleStretch(item) {
+  var fill = item.fill
+  if (fill != null && item.constructor.name == 'Rectangle') {
+    var rect = new Rectangle()
+    SetGlobalBounds(rect, item.globalBounds) // 同じ場所に作成
+    // 新規に作成することで、元のイメージがCCライブラリのイメージでもSTRETCH変形ができる
+    var cloneFill = fill.clone()
+    cloneFill.scaleBehavior = ImageFill.SCALE_STRETCH
+    rect.fill = cloneFill
+    return rect
+  }
+  return null
+}
+
 function pluginChangeScaleBehavior(slection, root) {
   selection.items.forEach(item => {
-    var clone = null
-    var fill = item.fill
-    if (fill != null) {
-      console.log(fill)
-      console.log('change')
-      fill.scaleBehavior = ImageFill.SCALE_STRETCH
-      console.log(fill.scaleBehavior)
-      if (fill.scaleBehavior != ImageFill.SCALE_STRETCH) {
-        console.log('fail')
-        console.log(fill.scaleBehavior)
-      } else {
-        clone = fill.clone
-        var rect = new GraphicNode()
-        rect.width = 100
-        rect.height = 100
-        rect.fill = clone
-        selection.insertionParent.addChild(rect)
-        selection.items = [rect]
-      }
-    }
+    var rect = duplicateRectangleStretch(item)
+    selection.insertionParent.addChild(rect)
+    selection.items = [rect]
   })
 }
 
