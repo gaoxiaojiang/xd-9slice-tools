@@ -26,8 +26,8 @@
     },
     {
       "type": "menu",
-      "label": "change scale behavior",
-      "commandId": "pluginChangeScaleBehavior"
+      "label": "duplicate stretch",
+      "commandId": "pluginDuplicateStretch"
     }
   ]
 }

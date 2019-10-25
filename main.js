@@ -514,7 +514,7 @@ async function pluginMake9Slice(slection, root) {
       //
       item.removeFromParent()
       selection.items[0].addChild(item)
-      item.name = "source"
+      item.name = 'source'
       item.visible = false
       //
       selection.items = slices
@@ -538,7 +538,7 @@ function duplicateRectangleStretch(item) {
   return null
 }
 
-function pluginChangeScaleBehavior(slection, root) {
+function pluginDuplicateStretch(slection, root) {
   selection.items.forEach(item => {
     var rect = duplicateRectangleStretch(item)
     selection.insertionParent.addChild(rect)
@@ -551,6 +551,6 @@ module.exports = {
   commands: {
     pluginScaleAdjust: pluginScaleAdjust,
     pluginMake9Slice: pluginMake9Slice,
-    pluginChangeScaleBehavior: pluginChangeScaleBehavior,
+    pluginDuplicateStretch: pluginDuplicateStretch,
   },
 }
