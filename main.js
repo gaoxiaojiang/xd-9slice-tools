@@ -151,21 +151,34 @@ function scaleAdjustTop(
   const sliceRightPx = sliceParameter['right']
   const sliceTopPx = sliceParameter['top']
   const sliceBottomPx = sliceParameter['bottom']
+
+  console.log('--------------------')
+  console.log(sliceLeftPx)
+
+  var naturalWidth = null
+  var naturalHeight = null
+
   var imageFill = graphicNode.fill
   if (imageFill == null || imageFill.constructor.name != 'ImageFill') {
-    console.log('*** イメージがありません')
+    var parent = graphicNode.parent
+    parent.children.forEach(child => {
+      if (child.name == 'source') {
+        console.log('find source')
+        naturalWidth = child.globalBounds.width
+        naturalHeight = child.globalBounds.height
+      }
+    })
+  } else {
+    naturalWidth = imageFill.naturalWidth
+    naturalHeight = imageFill.naturalHeight
+  }
+  if (naturalWidth == null || naturalHeight == null) {
+    alert('sourceがみつかりません')
     return
   }
+
   var maskBounds = mask.globalBounds
   var graphicBounds = graphicNode.globalDrawBounds
-
-  // SCALE_STRETCH(サイズに合わせて変形する)じゃないと、対応できない
-  imageFill.scaleBehavior = ImageFill.SCALE_STRETCH
-  if (imageFill.scaleBehavior != ImageFill.SCALE_STRETCH) {
-    // SCALE_STRETCHにしたが、変更できなかった
-    alert('SCALE_STRETCHモードに変更できませんでした')
-    return
-  }
 
   var newMaskBounds = null
   var newGraphicBounds = null
@@ -183,8 +196,8 @@ function scaleAdjustTop(
       newGraphicBounds = {
         x: wholeGlobalBounds.x,
         y: wholeGlobalBounds.y,
-        width: imageFill.naturalWidth,
-        height: imageFill.naturalHeight,
+        width: naturalWidth,
+        height: naturalHeight,
       }
       break
     case 'top-right':
@@ -197,19 +210,15 @@ function scaleAdjustTop(
         height: sliceTopPx,
       }
       newGraphicBounds = {
-        x:
-          wholeGlobalBounds.x +
-          wholeGlobalBounds.width -
-          imageFill.naturalWidth,
+        x: wholeGlobalBounds.x + wholeGlobalBounds.width - naturalWidth,
         y: wholeGlobalBounds.y,
-        width: imageFill.naturalWidth,
-        height: imageFill.naturalHeight,
+        width: naturalWidth,
+        height: naturalHeight,
       }
       break
     case 'right': {
       if (sliceRightPx == 0) break
-      const maskNaturalHeight =
-        imageFill.naturalHeight - sliceTopPx - sliceBottomPx
+      const maskNaturalHeight = naturalHeight - sliceTopPx - sliceBottomPx
       const maskHeight = wholeGlobalBounds.height - sliceTopPx - sliceBottomPx
       const scaleY = maskHeight / maskNaturalHeight
       newMaskBounds = {
@@ -219,20 +228,16 @@ function scaleAdjustTop(
         height: maskHeight,
       }
       newGraphicBounds = {
-        x:
-          wholeGlobalBounds.x +
-          wholeGlobalBounds.width -
-          imageFill.naturalWidth,
+        x: wholeGlobalBounds.x + wholeGlobalBounds.width - naturalWidth,
         y: wholeGlobalBounds.y + sliceTopPx - sliceTopPx * scaleY,
-        width: imageFill.naturalWidth,
-        height: imageFill.naturalHeight * scaleY,
+        width: naturalWidth,
+        height: naturalHeight * scaleY,
       }
       break
     }
     case 'left': {
       if (sliceLeftPx == 0) break
-      const maskNaturalHeight =
-        imageFill.naturalHeight - sliceTopPx - sliceBottomPx
+      const maskNaturalHeight = naturalHeight - sliceTopPx - sliceBottomPx
       const maskHeight = wholeGlobalBounds.height - sliceTopPx - sliceBottomPx
       const scaleY = maskHeight / maskNaturalHeight
       newMaskBounds = {
@@ -244,8 +249,8 @@ function scaleAdjustTop(
       newGraphicBounds = {
         x: wholeGlobalBounds.x,
         y: wholeGlobalBounds.y + sliceTopPx - sliceTopPx * scaleY,
-        width: imageFill.naturalWidth,
-        height: imageFill.naturalHeight * scaleY,
+        width: naturalWidth,
+        height: naturalHeight * scaleY,
       }
       break
     }
@@ -260,12 +265,9 @@ function scaleAdjustTop(
       }
       newGraphicBounds = {
         x: wholeGlobalBounds.x,
-        y:
-          wholeGlobalBounds.y +
-          wholeGlobalBounds.height -
-          imageFill.naturalHeight,
-        width: imageFill.naturalWidth,
-        height: imageFill.naturalHeight,
+        y: wholeGlobalBounds.y + wholeGlobalBounds.height - naturalHeight,
+        width: naturalWidth,
+        height: naturalHeight,
       }
       break
     case 'bottom-right':
@@ -278,22 +280,15 @@ function scaleAdjustTop(
         height: sliceTopPx,
       }
       newGraphicBounds = {
-        x:
-          wholeGlobalBounds.x +
-          wholeGlobalBounds.width -
-          imageFill.naturalWidth,
-        y:
-          wholeGlobalBounds.y +
-          wholeGlobalBounds.height -
-          imageFill.naturalHeight,
-        width: imageFill.naturalWidth,
-        height: imageFill.naturalHeight,
+        x: wholeGlobalBounds.x + wholeGlobalBounds.width - naturalWidth,
+        y: wholeGlobalBounds.y + wholeGlobalBounds.height - naturalHeight,
+        width: naturalWidth,
+        height: naturalHeight,
       }
       break
     case 'top': {
       if (sliceTopPx == 0) break
-      const maskNaturalWidth =
-        imageFill.naturalWidth - sliceRightPx - sliceLeftPx
+      const maskNaturalWidth = naturalWidth - sliceRightPx - sliceLeftPx
       const maskWidth = wholeGlobalBounds.width - sliceRightPx - sliceLeftPx
       const maskHeight = sliceTopPx
       const scaleX = maskWidth / maskNaturalWidth
@@ -306,15 +301,14 @@ function scaleAdjustTop(
       newGraphicBounds = {
         x: wholeGlobalBounds.x + sliceLeftPx - sliceLeftPx * scaleX,
         y: wholeGlobalBounds.y,
-        width: imageFill.naturalWidth * scaleX,
-        height: imageFill.naturalHeight,
+        width: naturalWidth * scaleX,
+        height: naturalHeight,
       }
       break
     }
     case 'bottom': {
       if (sliceBottomPx == 0) break
-      const maskNaturalWidth =
-        imageFill.naturalWidth - sliceRightPx - sliceLeftPx
+      const maskNaturalWidth = naturalWidth - sliceRightPx - sliceLeftPx
       const maskWidth = wholeGlobalBounds.width - sliceRightPx - sliceLeftPx
       const maskHeight = sliceTopPx
       const scaleX = maskWidth / maskNaturalWidth
@@ -326,20 +320,15 @@ function scaleAdjustTop(
       }
       newGraphicBounds = {
         x: wholeGlobalBounds.x + sliceLeftPx - sliceLeftPx * scaleX,
-        y:
-          wholeGlobalBounds.y +
-          wholeGlobalBounds.height -
-          imageFill.naturalHeight,
-        width: imageFill.naturalWidth * scaleX,
-        height: imageFill.naturalHeight,
+        y: wholeGlobalBounds.y + wholeGlobalBounds.height - naturalHeight,
+        width: naturalWidth * scaleX,
+        height: naturalHeight,
       }
       break
     }
     case 'center': {
-      const maskNaturalWidth =
-        imageFill.naturalWidth - sliceRightPx - sliceLeftPx
-      const maskNaturalHeight =
-        imageFill.naturalHeight - sliceTopPx - sliceBottomPx
+      const maskNaturalWidth = naturalWidth - sliceRightPx - sliceLeftPx
+      const maskNaturalHeight = naturalHeight - sliceTopPx - sliceBottomPx
       const maskWidth = wholeGlobalBounds.width - sliceRightPx - sliceLeftPx
       const maskHeight = wholeGlobalBounds.height - sliceTopPx - sliceBottomPx
       const scaleX = maskWidth / maskNaturalWidth
@@ -353,8 +342,8 @@ function scaleAdjustTop(
       newGraphicBounds = {
         x: wholeGlobalBounds.x + sliceLeftPx - sliceLeftPx * scaleX,
         y: wholeGlobalBounds.y + sliceTopPx - sliceTopPx * scaleY,
-        width: imageFill.naturalWidth * scaleX,
-        height: imageFill.naturalHeight * scaleY,
+        width: naturalWidth * scaleX,
+        height: naturalHeight * scaleY,
       }
       break
     }
@@ -475,51 +464,49 @@ async function pluginMake9Slice(slection, root) {
   selectionItems.forEach(item => {
     var itemName = item.name
     const parameter = get9sliceParamters(itemName)
-    if (item.fill != null) {
-      // マスクの作成
-      var mask = new Rectangle()
-      mask.name = 'top-left-mask'
-      selection.insertionParent.addChild(mask)
-      SetGlobalBounds(mask, item.globalBounds)
-      // 画像をコピーして、CCライブラリのものでも変形できるようにする
-      var rectImage = duplicateStretch(item)
-      rectImage.name = 'top-left-copy'
-      // 位置をソースと同じ場所にする
-      SetGlobalBounds(rectImage, item.globalBounds)
-      // マスクグループの作成
-      selection.items = [rectImage, mask]
-      commands.createMaskGroup()
-      var slices = [selection.items[0]]
-      selection.items[0].name = 'top-left'
+    // マスクの作成
+    var mask = new Rectangle()
+    mask.name = 'top-left-mask'
+    selection.insertionParent.addChild(mask)
+    SetGlobalBounds(mask, item.globalBounds)
+    // 画像をコピーして、CCライブラリのものでも変形できるようにする
+    var rectImage = duplicateStretch(item)
+    rectImage.name = 'top-left-copy'
+    // 位置をソースと同じ場所にする
+    SetGlobalBounds(rectImage, item.globalBounds)
+    // マスクグループの作成
+    selection.items = [rectImage, mask]
+    commands.createMaskGroup()
+    var slices = [item, selection.items[0]]
+    selection.items[0].name = 'top-left'
 
-      // 他のスライスも作成する
-      const names = [
-        'top',
-        'top-right',
-        'left',
-        'center',
-        'right',
-        'bottom-left',
-        'bottom',
-        'bottom-right',
-      ]
-      names.forEach(name => {
-        commands.duplicate()
-        selection.items[0].name = name
-        slices.push(selection.items[0])
-      })
-      // 一個のグループにまとめる
-      selection.items = slices
-      commands.group()
-      selection.items[0].name = itemName
-      //
-      //item.removeFromParent()
-      //selection.items[0].addChild(item)
-      item.name = 'source'
-      item.visible = false
-      //
-      selection.items = slices
-    }
+    // 他のスライスも作成する
+    const names = [
+      'top',
+      'top-right',
+      'left',
+      'center',
+      'right',
+      'bottom-left',
+      'bottom',
+      'bottom-right',
+    ]
+    names.forEach(name => {
+      commands.duplicate()
+      selection.items[0].name = name
+      slices.push(selection.items[0])
+    })
+    // 一個のグループにまとめる
+    selection.items = slices
+    commands.group()
+    selection.items[0].name = itemName
+    //
+    //item.removeFromParent()
+    //selection.items[0].addChild(item)
+    item.name = 'source'
+    item.visible = false
+    //
+    selection.items = slices
   })
 
   console.log('done')
@@ -534,6 +521,7 @@ function duplicateStretch(item) {
   if (fill != null && item.constructor.name == 'Rectangle') {
     // ImageFillをもったRectangleのコピー
     var rect = new Rectangle()
+    rect.name = item.name + '-stretch'
     SetGlobalBounds(rect, item.globalBounds) // 同じ場所に作成
     // 新規に作成することで、元のイメージがCCライブラリのイメージでもSTRETCH変形ができる
     var cloneFill = fill.clone()
@@ -555,7 +543,7 @@ function duplicateStretch(item) {
 function pluginDuplicateStretch(slection, root) {
   selection.items.forEach(item => {
     var rect = duplicateStretch(item)
-    selection.insertionParent.addChild(rect)
+    //selection.insertionParent.addChild(rect)
     SetGlobalBounds(rect, item.globalBounds)
     selection.items = [rect]
   })
