@@ -482,9 +482,8 @@ async function pluginMake9Slice(slection, root) {
       selection.insertionParent.addChild(mask)
       SetGlobalBounds(mask, item.globalBounds)
       // 画像をコピーして、CCライブラリのものでも変形できるようにする
-      var rectImage = duplicateRectangleStretch(item)
-      rectImage.name = 'top-left-image'
-      selection.insertionParent.addChild(rectImage)
+      var rectImage = duplicateStretch(item)
+      rectImage.name = 'top-left-copy'
       // 位置をソースと同じ場所にする
       SetGlobalBounds(rectImage, item.globalBounds)
       // マスクグループの作成
@@ -514,8 +513,8 @@ async function pluginMake9Slice(slection, root) {
       commands.group()
       selection.items[0].name = itemName
       //
-      item.removeFromParent()
-      selection.items[0].addChild(item)
+      //item.removeFromParent()
+      //selection.items[0].addChild(item)
       item.name = 'source'
       item.visible = false
       //
@@ -527,26 +526,35 @@ async function pluginMake9Slice(slection, root) {
 }
 
 /**
- * 画像の複製
- * @param {} item
+ * Stretch変形できるものへ変換コピーする
+ * @param {*} item
  */
-function duplicateRectangleStretch(item) {
+function duplicateStretch(item) {
   var fill = item.fill
   if (fill != null && item.constructor.name == 'Rectangle') {
+    // ImageFillをもったRectangleのコピー
     var rect = new Rectangle()
     SetGlobalBounds(rect, item.globalBounds) // 同じ場所に作成
     // 新規に作成することで、元のイメージがCCライブラリのイメージでもSTRETCH変形ができる
     var cloneFill = fill.clone()
     cloneFill.scaleBehavior = ImageFill.SCALE_STRETCH
     rect.fill = cloneFill
+    selection.insertionParent.addChild(rect)
     return rect
   }
-  return null
+  // それ以外の場合は普通にコピー
+  var selectionItems = [].concat(selection.items)
+  selection.items = [item]
+  commands.duplicate()
+  var node = selection.items[0]
+  //node.removeFromParent()
+  selection.items = selectionItems
+  return node
 }
 
-function pluginChangeScaleBehavior(slection, root) {
+function pluginDuplicateStretch(slection, root) {
   selection.items.forEach(item => {
-    var rect = duplicateRectangleStretch(item)
+    var rect = duplicateStretch(item)
     selection.insertionParent.addChild(rect)
     SetGlobalBounds(rect, item.globalBounds)
     selection.items = [rect]
@@ -558,6 +566,6 @@ module.exports = {
   commands: {
     pluginScaleAdjust: pluginScaleAdjust,
     pluginMake9Slice: pluginMake9Slice,
-    pluginChangeScaleBehavior: pluginChangeScaleBehavior,
+    pluginDuplicateStretch: pluginDuplicateStretch,
   },
 }
