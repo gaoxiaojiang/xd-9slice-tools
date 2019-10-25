@@ -485,6 +485,8 @@ async function pluginMake9Slice(slection, root) {
       var rectImage = duplicateRectangleStretch(item)
       rectImage.name = 'top-left-image'
       selection.insertionParent.addChild(rectImage)
+      // 位置をソースと同じ場所にする
+      SetGlobalBounds(rectImage, item.globalBounds)
       // マスクグループの作成
       selection.items = [rectImage, mask]
       commands.createMaskGroup()
@@ -514,7 +516,7 @@ async function pluginMake9Slice(slection, root) {
       //
       item.removeFromParent()
       selection.items[0].addChild(item)
-      item.name = "source"
+      item.name = 'source'
       item.visible = false
       //
       selection.items = slices
@@ -524,6 +526,10 @@ async function pluginMake9Slice(slection, root) {
   console.log('done')
 }
 
+/**
+ * 画像の複製
+ * @param {} item
+ */
 function duplicateRectangleStretch(item) {
   var fill = item.fill
   if (fill != null && item.constructor.name == 'Rectangle') {
@@ -542,6 +548,7 @@ function pluginChangeScaleBehavior(slection, root) {
   selection.items.forEach(item => {
     var rect = duplicateRectangleStretch(item)
     selection.insertionParent.addChild(rect)
+    SetGlobalBounds(rect, item.globalBounds)
     selection.items = [rect]
   })
 }
