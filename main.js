@@ -475,72 +475,82 @@ async function pluginMake9Slice(slection, root) {
   selectionItems.forEach(item => {
     var itemName = item.name
     const parameter = get9sliceParamters(itemName)
-    if (item.fill != null) {
-      // マスクの作成
-      var mask = new Rectangle()
-      mask.name = 'top-left-mask'
-      selection.insertionParent.addChild(mask)
-      SetGlobalBounds(mask, item.globalBounds)
-      // 画像をコピーして、CCライブラリのものでも変形できるようにする
-      var rectImage = duplicateRectangleStretch(item)
-      rectImage.name = 'top-left-image'
-      selection.insertionParent.addChild(rectImage)
-      // マスクグループの作成
-      selection.items = [rectImage, mask]
-      commands.createMaskGroup()
-      var slices = [selection.items[0]]
-      selection.items[0].name = 'top-left'
+    // マスクの作成
+    var mask = new Rectangle()
+    mask.name = 'top-left-mask'
+    selection.insertionParent.addChild(mask)
+    SetGlobalBounds(mask, item.globalBounds)
+    // 画像をコピーして、CCライブラリのものでも変形できるようにする
+    var rectImage = duplicateStretch(item)
+    rectImage.name = 'top-left-copy'
+    // マスクグループの作成
+    selection.items = [rectImage, mask]
+    commands.createMaskGroup()
+    var slices = [selection.items[0]]
+    selection.items[0].name = 'top-left'
 
-      // 他のスライスも作成する
-      const names = [
-        'top',
-        'top-right',
-        'left',
-        'center',
-        'right',
-        'bottom-left',
-        'bottom',
-        'bottom-right',
-      ]
-      names.forEach(name => {
-        commands.duplicate()
-        selection.items[0].name = name
-        slices.push(selection.items[0])
-      })
-      // 一個のグループにまとめる
-      selection.items = slices
-      commands.group()
-      selection.items[0].name = itemName
-      //
-      item.removeFromParent()
-      selection.items[0].addChild(item)
-      item.name = 'source'
-      item.visible = false
-      //
-      selection.items = slices
-    }
+    // 他のスライスも作成する
+    const names = [
+      'top',
+      'top-right',
+      'left',
+      'center',
+      'right',
+      'bottom-left',
+      'bottom',
+      'bottom-right',
+    ]
+    names.forEach(name => {
+      commands.duplicate()
+      selection.items[0].name = name
+      slices.push(selection.items[0])
+    })
+    // 一個のグループにまとめる
+    selection.items = slices
+    commands.group()
+    selection.items[0].name = itemName
+    //
+    //item.removeFromParent()
+    //selection.items[0].addChild(item)
+    item.name = 'source'
+    item.visible = false
+    //
+    selection.items = slices
   })
 
   console.log('done')
 }
 
-function duplicateRectangleStretch(item) {
+/**
+ * Stretch変形できるものへ変換コピーする
+ * @param {*} item
+ */
+function duplicateStretch(item) {
   var fill = item.fill
   if (fill != null && item.constructor.name == 'Rectangle') {
+    // ImageFillをもったRectangleのコピー
     var rect = new Rectangle()
     SetGlobalBounds(rect, item.globalBounds) // 同じ場所に作成
     // 新規に作成することで、元のイメージがCCライブラリのイメージでもSTRETCH変形ができる
     var cloneFill = fill.clone()
     cloneFill.scaleBehavior = ImageFill.SCALE_STRETCH
     rect.fill = cloneFill
+    selection.insertionParent.addChild(rect)
     return rect
   }
-  return null
+  // それ以外の場合は普通にコピー
+  var selectionItems = [].concat(selection.items)
+  selection.items = [item]
+  commands.duplicate()
+  var node = selection.items[0]
+  //node.removeFromParent()
+  selection.items = selectionItems
+  return node
 }
 
 function pluginDuplicateStretch(slection, root) {
   selection.items.forEach(item => {
-    var rect = duplicateRectangleStretch(item)
+    var rect = duplicateStretch(item)
     selection.insertionParent.addChild(rect)
     selection.items = [rect]
   })
