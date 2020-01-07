@@ -27,7 +27,7 @@ function h(tag, props, ...children) {
     } else {
       for (let name in props) {
         let value = props[name]
-        if (name == 'style') {
+        if (name === 'style') {
           Object.assign(element.style, value)
         } else {
           element.setAttribute(name, value)
@@ -84,10 +84,16 @@ async function alert(message, title) {
   return await dialog.showModal()
 }
 
-function get9sliceParamters(str) {
-  var pattern = /@9slice=([0-9]+)(px)[^0-9]?([0-9]+)?(px)?[^0-9]?([0-9]+)?(px)?[^0-9]?([0-9]+)?(px)?[^0-9]?/
-  var result = str.match(pattern)
-  //console.log(result)
+/**
+ * パラメータの取得
+ * @param str
+ * @returns {null|{top: number, left: number, bottom: number, right: number}}
+ */
+function getImageSliceParameters(str) {
+  // 正規表現テスト
+  // https://regex101.com/
+  const pattern = /([^{]*){\s*image-slice\s*:\s*(?<top>[0-9]+)(px)[^0-9]?(?<right>[0-9]+)?(px)?[^0-9]?(?<bottom>[0-9]+)?(px)?[^0-9]?(?<left>[0-9]+)?(px)?[^0-9]?/gi
+  let result = pattern.exec(str)
   /*
   省略については、CSSに準拠
   http://www.htmq.com/css3/border-image-slice.shtml
@@ -96,28 +102,28 @@ function get9sliceParamters(str) {
   3番目の値が省略された場合には、1番目の値と同じ。
   2番目の値が省略された場合には、1番目の値と同じ。
   */
-  if (result[3] == null) {
-    result[3] = result[1]
-  }
-  if (result[5] == null) {
-    result[5] = result[1]
-  }
-  if (result[7] == null) {
-    result[7] = result[3]
-  }
-  if (result[1] == null) {
-    return null
-  }
+  if (!result || !result.groups.top) return null // 一つも値がとれなかったとき
+  let top = parseInt(result.groups.top)
+  let right = result.groups.right ? parseInt(result.groups.right) : top
+  let bottom = result.groups.bottom ? parseInt(result.groups.bottom) : top
+  let left = result.groups.left ? parseInt(result.groups.left) : right
+
   return {
-    top: parseInt(result[1]),
-    right: parseInt(result[3]),
-    bottom: parseInt(result[5]),
-    left: parseInt(result[7]),
+    top,
+    right,
+    bottom,
+    left,
   }
 }
 
+/**
+ * @param {SceneNodeClass} node
+ * @param {Bounds} newGlobalBounds
+ * @constructor
+ */
 function SetGlobalBounds(node, newGlobalBounds) {
   const globalBounds = node.globalBounds
+  //現在の座標から動かす差分を取得
   const deltaX = newGlobalBounds.x - globalBounds.x
   const deltaY = newGlobalBounds.y - globalBounds.y
   node.moveInParentCoordinates(deltaX, deltaY)
@@ -134,35 +140,34 @@ function SetGlobalPosition(node, newPosition) {
 function getNaturalSize(node) {}
 
 /**
- * スライスノード内のリサイズ
- * @param {*} mask
- * @param {*} graphicNode
- * @param {*} leftPx
- * @param {*} rightPx
+ * スライスノード内のマスクと絵を持つノードを9スライス用にリサイズ
+ * @param {string} typeName パーツ名 top,center,top-left等
+ * @param wholeGlobalBounds
+ * @param {SceneNodeClass|null} mask  リサイズするマスクノード nullでも良い
+ * @param {SceneNodeClass} graphicNode
+ * @param {{top:number, left:number, bottom:number, right:number}} sliceParameter　9スライスパラメータ
+ * @returns {boolean}
  */
-function scaleAdjustTop(
-  mode,
+function resizeMaskAndGraphicNode(
+  typeName,
   wholeGlobalBounds,
   mask,
   graphicNode,
   sliceParameter,
 ) {
-  const sliceLeftPx = sliceParameter['left']
-  const sliceRightPx = sliceParameter['right']
-  const sliceTopPx = sliceParameter['top']
-  const sliceBottomPx = sliceParameter['bottom']
+  const sliceLeftPx = sliceParameter.left
+  const sliceRightPx = sliceParameter.right
+  const sliceTopPx = sliceParameter.top
+  const sliceBottomPx = sliceParameter.bottom
 
-  console.log('--------------------')
-  console.log(sliceLeftPx)
+  let naturalWidth = null
+  let naturalHeight = null
 
-  var naturalWidth = null
-  var naturalHeight = null
-
-  var imageFill = graphicNode.fill
-  if (imageFill == null || imageFill.constructor.name != 'ImageFill') {
-    var parent = graphicNode.parent
+  let imageFill = graphicNode.fill
+  if (imageFill == null || imageFill.constructor.name !== 'ImageFill') {
+    let parent = graphicNode.parent
     parent.children.forEach(child => {
-      if (child.name == 'source') {
+      if (child.name === 'source') {
         console.log('find source')
         naturalWidth = child.globalBounds.width
         naturalHeight = child.globalBounds.height
@@ -174,19 +179,18 @@ function scaleAdjustTop(
   }
   if (naturalWidth == null || naturalHeight == null) {
     alert('sourceがみつかりません')
-    return
+    return false
   }
 
-  var maskBounds = mask.globalBounds
-  var graphicBounds = graphicNode.globalDrawBounds
+  let graphicBounds = graphicNode.globalDrawBounds
 
-  var newMaskBounds = null
-  var newGraphicBounds = null
+  let newMaskBounds = null
+  let newGraphicBounds = null
 
-  switch (mode) {
+  switch (typeName) {
     case 'top-left':
-      if (sliceTopPx == 0) break
-      if (sliceLeftPx == 0) break
+      if (sliceTopPx === 0) break
+      if (sliceLeftPx === 0) break
       newMaskBounds = {
         x: wholeGlobalBounds.x,
         y: wholeGlobalBounds.y,
@@ -201,8 +205,8 @@ function scaleAdjustTop(
       }
       break
     case 'top-right':
-      if (sliceTopPx == 0) break
-      if (sliceRightPx == 0) break
+      if (sliceTopPx === 0) break
+      if (sliceRightPx === 0) break
       newMaskBounds = {
         x: wholeGlobalBounds.x + wholeGlobalBounds.width - sliceRightPx,
         y: wholeGlobalBounds.y,
@@ -217,7 +221,7 @@ function scaleAdjustTop(
       }
       break
     case 'right': {
-      if (sliceRightPx == 0) break
+      if (sliceRightPx === 0) break
       const maskNaturalHeight = naturalHeight - sliceTopPx - sliceBottomPx
       const maskHeight = wholeGlobalBounds.height - sliceTopPx - sliceBottomPx
       const scaleY = maskHeight / maskNaturalHeight
@@ -236,7 +240,7 @@ function scaleAdjustTop(
       break
     }
     case 'left': {
-      if (sliceLeftPx == 0) break
+      if (sliceLeftPx === 0) break
       const maskNaturalHeight = naturalHeight - sliceTopPx - sliceBottomPx
       const maskHeight = wholeGlobalBounds.height - sliceTopPx - sliceBottomPx
       const scaleY = maskHeight / maskNaturalHeight
@@ -255,8 +259,8 @@ function scaleAdjustTop(
       break
     }
     case 'bottom-left':
-      if (sliceBottomPx == 0) break
-      if (sliceLeftPx == 0) break
+      if (sliceBottomPx === 0) break
+      if (sliceLeftPx === 0) break
       newMaskBounds = {
         x: wholeGlobalBounds.x,
         y: wholeGlobalBounds.y + wholeGlobalBounds.height - sliceBottomPx,
@@ -271,8 +275,8 @@ function scaleAdjustTop(
       }
       break
     case 'bottom-right':
-      if (sliceBottomPx == 0) break
-      if (sliceRightPx == 0) break
+      if (sliceBottomPx === 0) break
+      if (sliceRightPx === 0) break
       newMaskBounds = {
         x: wholeGlobalBounds.x + wholeGlobalBounds.width - sliceRightPx,
         y: wholeGlobalBounds.y + wholeGlobalBounds.height - sliceBottomPx,
@@ -287,7 +291,7 @@ function scaleAdjustTop(
       }
       break
     case 'top': {
-      if (sliceTopPx == 0) break
+      if (sliceTopPx === 0) break
       const maskNaturalWidth = naturalWidth - sliceRightPx - sliceLeftPx
       const maskWidth = wholeGlobalBounds.width - sliceRightPx - sliceLeftPx
       const maskHeight = sliceTopPx
@@ -307,7 +311,7 @@ function scaleAdjustTop(
       break
     }
     case 'bottom': {
-      if (sliceBottomPx == 0) break
+      if (sliceBottomPx === 0) break
       const maskNaturalWidth = naturalWidth - sliceRightPx - sliceLeftPx
       const maskWidth = wholeGlobalBounds.width - sliceRightPx - sliceLeftPx
       const maskHeight = sliceTopPx
@@ -349,49 +353,56 @@ function scaleAdjustTop(
     }
   }
 
-  if (newMaskBounds != null) {
+  if (mask && newMaskBounds != null) {
     SetGlobalBounds(mask, newMaskBounds)
   }
 
-  if (newGraphicBounds != null) {
+  if (graphicNode && newGraphicBounds != null) {
     SetGlobalBounds(graphicNode, newGraphicBounds)
   }
 
   if (newMaskBounds == null || newGraphicBounds == null) {
     return false
   }
+
   return true
 }
 
 /**
- *
- * @param {SceneNode} sliceNode
+ * @param wholeGlobalBounds
+ * @param sliceNode
+ * @param sliceParameter
  */
-function scaleAdjustSliceRegroup(wholeGlobalBounds, sliceNode, sliceParameter) {
-  var mask = sliceNode.mask
+function resizeSlicedGroup(wholeGlobalBounds, sliceNode, sliceParameter) {
+  if (sliceNode.name === 'source') {
+    sliceNode.resize(sliceNode.fill.naturalWidth, sliceNode.fill.naturalHeight)
+    return
+  }
+  let mask = sliceNode.mask
   if (!mask) {
     console.log('*** not found mask')
     return
   }
 
-  var children = []
+  // ungroup するのでその前にグループの中身を取得しておく
+  let children = []
   sliceNode.children.forEach(child => {
     children.push(child)
   })
 
   const sliceNodeName = sliceNode.name
-  var parent = sliceNode.parent
+  let parent = sliceNode.parent
   selection.items = [sliceNode]
 
   // 操作できるようにグループ解除
   commands.ungroup()
 
-  var maskGroupItems = [mask]
-  var visible = true
-  var image = children.forEach(child => {
+  let maskGroupItems = [mask]
+  let visible = true
+  let image = children.forEach(child => {
     // スライスノード内 リサイズの必要なものを探す
-    if (child == mask) return
-    var result = scaleAdjustTop(
+    if (child === mask) return // maskはリサイズしない
+    let result = resizeMaskAndGraphicNode(
       sliceNodeName,
       wholeGlobalBounds,
       mask,
@@ -408,7 +419,7 @@ function scaleAdjustSliceRegroup(wholeGlobalBounds, sliceNode, sliceParameter) {
   selection.items = maskGroupItems
   commands.createMaskGroup()
 
-  var maskGroup = selection.items[0]
+  let maskGroup = selection.items[0]
   maskGroup.name = sliceNodeName
   maskGroup.visible = visible
 }
@@ -419,13 +430,13 @@ function scaleAdjustSliceRegroup(wholeGlobalBounds, sliceNode, sliceParameter) {
  * @param {*} selection
  * @param {*} root
  */
-async function pluginScaleAdjust(selection, root) {
-  var selectionItems = []
+async function pluginResizeSlices(selection, root) {
+  let selectionItems = []
   selection.items.forEach(item => {
     selectionItems.push(item)
   })
 
-  var bounds = selection.items[0].parent.globalBounds
+  let bounds = selection.items[0].parent.globalBounds
 
   selectionItems.forEach(item => {
     /*
@@ -439,11 +450,11 @@ async function pluginScaleAdjust(selection, root) {
       }
     })
     */
-    // topを選んだ場合
+    // スライスされたグループを選んだ場合
     console.log(item.parent.name)
-    const sliceParameter = get9sliceParamters(item.parent.name)
+    const sliceParameter = getImageSliceParameters(item.parent.name)
     if (sliceParameter != null) {
-      scaleAdjustSliceRegroup(bounds, item, sliceParameter)
+      resizeSlicedGroup(bounds, item, sliceParameter)
     }
     /*
     // 直接選んだ場合
@@ -455,94 +466,102 @@ async function pluginScaleAdjust(selection, root) {
   })
 }
 
-async function pluginMake9Slice(slection, root) {
-  var selectionItems = []
-  selection.items.forEach(item => {
-    selectionItems.push(item)
-  })
-
-  selectionItems.forEach(item => {
-    var itemName = item.name
-    const parameter = get9sliceParamters(itemName)
-    // マスクの作成
-    var mask = new Rectangle()
-    mask.name = 'top-left-mask'
-    selection.insertionParent.addChild(mask)
-    SetGlobalBounds(mask, item.globalBounds)
-    // 画像をコピーして、CCライブラリのものでも変形できるようにする
-    var rectImage = duplicateStretch(item)
-    rectImage.name = 'top-left-copy'
-    // 位置をソースと同じ場所にする
-    SetGlobalBounds(rectImage, item.globalBounds)
-    // マスクグループの作成
-    selection.items = [rectImage, mask]
-    commands.createMaskGroup()
-    var slices = [item, selection.items[0]]
-    selection.items[0].name = 'top-left'
-
-    // 他のスライスも作成する
-    const names = [
-      'top',
-      'top-right',
-      'left',
-      'center',
-      'right',
-      'bottom-left',
-      'bottom',
-      'bottom-right',
-    ]
-    names.forEach(name => {
-      commands.duplicate()
-      selection.items[0].name = name
-      slices.push(selection.items[0])
-    })
-    // 一個のグループにまとめる
-    selection.items = slices
-    commands.group()
-    selection.items[0].name = itemName
-    //
-    //item.removeFromParent()
-    //selection.items[0].addChild(item)
-    item.name = 'source'
-    item.visible = false
-    //
-    selection.items = slices
-  })
-
-  console.log('done')
-}
-
 /**
  * Stretch変形できるものへ変換コピーする
- * @param {*} item
+ * @param {SceneNodeClass} item
  */
-function duplicateStretch(item) {
-  var fill = item.fill
-  if (fill != null && item.constructor.name == 'Rectangle') {
+function duplicateStretchable(item) {
+  let fill = item.fill
+  if (fill != null && item.constructor.name === 'Rectangle') {
     // ImageFillをもったRectangleのコピー
-    var rect = new Rectangle()
+    let rect = new Rectangle()
     rect.name = item.name + '-stretch'
     SetGlobalBounds(rect, item.globalBounds) // 同じ場所に作成
     // 新規に作成することで、元のイメージがCCライブラリのイメージでもSTRETCH変形ができる
-    var cloneFill = fill.clone()
+    let cloneFill = fill.clone()
     cloneFill.scaleBehavior = ImageFill.SCALE_STRETCH
     rect.fill = cloneFill
     selection.insertionParent.addChild(rect)
     return rect
   }
   // それ以外の場合は普通にコピー
-  var selectionItems = [].concat(selection.items)
+  const selectionItems = [].concat(selection.items)
   selection.items = [item]
   commands.duplicate()
-  var node = selection.items[0]
+  const node = selection.items[0]
   //node.removeFromParent()
   selection.items = selectionItems
   return node
 }
 
+/**
+ * @param {SceneNodeClass} item
+ * @param {Selection} selection
+ */
+function make9Slice(item, selection) {
+  let itemName = item.name
+  const parameter = getImageSliceParameters(itemName)
+  // マスクの作成
+  let mask = new Rectangle()
+  mask.name = 'top-left-mask'
+  selection.insertionParent.addChild(mask)
+  SetGlobalBounds(mask, item.globalBounds)
+  // 画像をコピーして、CCライブラリのものでも変形できるようにする
+  let rectImage = duplicateStretchable(item)
+  rectImage.name = 'top-left-copy'
+  // 位置をソースと同じ場所にする
+  SetGlobalBounds(rectImage, item.globalBounds)
+  // マスクグループの作成
+  selection.items = [rectImage, mask]
+  commands.createMaskGroup()
+  let slices = [item, selection.items[0]]
+  selection.items[0].name = 'top-left'
+
+  // 他のスライスも作成する
+  const names = [
+    'top',
+    'top-right',
+    'left',
+    'center',
+    'right',
+    'bottom-left',
+    'bottom',
+    'bottom-right',
+  ]
+  names.forEach(name => {
+    commands.duplicate()
+    selection.items[0].name = name
+    slices.push(selection.items[0])
+  })
+  // 一個のグループにまとめる
+  selection.items = slices
+  commands.group()
+  selection.items[0].name = itemName
+  //
+  //item.removeFromParent()
+  //selection.items[0].addChild(item)
+  item.name = 'source'
+  item.visible = false
+  //
+  selection.items = slices
+}
+
+async function pluginMake9Slice(selection, root) {
+  let selectionItems = []
+  selection.items.forEach(item => {
+    selectionItems.push(item)
+  })
+
+  selectionItems.forEach(item => {
+    make9Slice(item, selection)
+  })
+
+  console.log('done')
+}
+
 function pluginDuplicateStretch(slection, root) {
   selection.items.forEach(item => {
-    var rect = duplicateStretch(item)
+    var rect = duplicateStretchable(item)
     //selection.insertionParent.addChild(rect)
     SetGlobalBounds(rect, item.globalBounds)
     selection.items = [rect]
@@ -552,7 +571,7 @@ function pluginDuplicateStretch(slection, root) {
 module.exports = {
   // コマンドIDとファンクションの紐付け
   commands: {
-    pluginScaleAdjust: pluginScaleAdjust,
+    pluginScaleAdjust: pluginResizeSlices,
     pluginMake9Slice: pluginMake9Slice,
     pluginDuplicateStretch: pluginDuplicateStretch,
   },
